@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MLCU Press – Inventory & Sales Dashboard</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Google Identity Services (for Google Drive sync) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              50:  '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+            slate: {
+              750: '#293548',
+              850: '#1a2234',
+              950: '#0d1526',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .section-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .metric-card {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+    }
+    .metric-card.green {
+      background: linear-gradient(135deg, #065f46 0%, #059669 100%);
+    }
+    .metric-card.indigo {
+      background: linear-gradient(135deg, #312e81 0%, #4f46e5 100%);
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
+    .stock-input {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 4px 8px;
+      width: 80px;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1e293b;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .stock-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-danger {
+      background: #fee2e2;
+      color: #dc2626;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      border: 1px solid #fca5a5;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-edit {
+      background: #dbeafe;
+      color: #2563eb;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      border: 1px solid #93c5fd;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-edit:hover { background: #bfdbfe; }
+    .btn-save {
+      background: #d1fae5;
+      color: #059669;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      border: 1px solid #6ee7b7;
+      cursor: pointer;
+    }
+    .btn-cancel {
+      background: #f1f5f9;
+      color: #64748b;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      border: 1px solid #cbd5e1;
+      cursor: pointer;
+    }
+    .form-input {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.875rem;
+      color: #1e293b;
+      background: #f8fafc;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+      background: #fff;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+    }
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+    }
+    .section-eyebrow {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    table { border-collapse: collapse; width: 100%; }
+    th {
+      background: #f1f5f9;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #64748b;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    td {
+      padding: 10px 14px;
+      font-size: 0.855rem;
+      color: #334155;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .badge {
+      display: inline-block;
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .badge-cash    { background: #d1fae5; color: #065f46; }
+    .badge-online  { background: #dbeafe; color: #1e40af; }
+    .badge-transfer{ background: #ede9fe; color: #4c1d95; }
+    .nav-tab {
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-tab.active {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #94a3b8;
+    }
+    .empty-state svg { margin: 0 auto 12px; display: block; }
+    .low-stock { color: #dc2626; font-weight: 700; }
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #1e293b;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.25s, transform 0.25s;
+      max-width: 320px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-left: 4px solid #10b981; }
+    .toast.error   { border-left: 4px solid #ef4444; }
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,0.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      margin: 16px;
+    }
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 640px) {
+      .metrics-grid { grid-template-columns: 1fr !important; }
+      .hide-mobile { display: none !important; }
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen">
+
+  <!-- ═══════════════ HEADER ═══════════════ -->
+  <header style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);" class="sticky top-0 z-50 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center" style="height:52px;">
+          <img src="data:image/png;base64,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" alt="MLCU Press Logo" style="height:52px;width:auto;object-fit:contain;" />
+        </div>
+        <div>
+          <h1 class="text-white font-bold text-lg leading-tight">MLCU Press</h1>
+          <p class="text-blue-300 text-xs font-medium">Inventory &amp; Sales Dashboard</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-blue-200 text-xs font-medium hide-mobile" id="headerDate"></div>
+        <div class="flex items-center gap-2">
+          <button onclick="exportData()" title="Download a backup file of your inventory & sales" class="flex items-center gap-1.5 bg-white bg-opacity-10 hover:bg-opacity-20 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            <span class="hide-mobile">Backup</span>
+          </button>
+          <button onclick="document.getElementById('importFileInput').click()" title="Restore data from a backup file" class="flex items-center gap-1.5 bg-white bg-opacity-10 hover:bg-opacity-20 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0l4 4m-4-4l-4 4M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg>
+            <span class="hide-mobile">Restore</span>
+          </button>
+          <input type="file" id="importFileInput" accept="application/json,.json" class="hidden" onchange="importData(this.files[0])" />
+          <span class="w-px h-6 bg-white bg-opacity-20 mx-1 hide-mobile"></span>
+          <button id="driveConnectBtn" onclick="initGoogleDrive()" title="Connect your Google Drive account" class="flex items-center gap-1.5 bg-white bg-opacity-10 hover:bg-opacity-20 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.5 6.06L11.21 9.5 7.71 3.5zm8.58 0l-3.5 6L19.35 21l3.5-6-6.56-11.5zM8.55 21.06h11.9l-3.5-6.06H5.05l3.5 6.06z"/></svg>
+            <span class="hide-mobile">Connect Drive</span>
+          </button>
+          <button id="driveSaveBtn" onclick="saveToDrive()" style="display:none" title="Save current data to your Google Drive" class="flex items-center gap-1.5 bg-white bg-opacity-10 hover:bg-opacity-20 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            <span class="hide-mobile">Save to Drive</span>
+          </button>
+          <button id="driveLoadBtn" onclick="loadFromDrive()" style="display:none" title="Load data saved on your Google Drive" class="flex items-center gap-1.5 bg-white bg-opacity-10 hover:bg-opacity-20 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 21V9m0 0l4 4m-4-4l-4 4M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg>
+            <span class="hide-mobile">Load from Drive</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- ═══════════════ METRICS ═══════════════ -->
+    <div class="grid grid-cols-3 gap-4 metrics-grid" id="metricsGrid">
+      <div class="metric-card rounded-xl p-5 text-white">
+        <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">Total Titles</p>
+        <p class="text-4xl font-extrabold" id="metricTitles">0</p>
+        <p class="text-blue-200 text-xs mt-1">Books in catalogue</p>
+      </div>
+      <div class="metric-card green rounded-xl p-5 text-white">
+        <p class="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-1">Total Stock</p>
+        <p class="text-4xl font-extrabold" id="metricStock">0</p>
+        <p class="text-emerald-100 text-xs mt-1">Copies available</p>
+      </div>
+      <div class="metric-card indigo rounded-xl p-5 text-white">
+        <p class="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Revenue</p>
+        <p class="text-4xl font-extrabold" id="metricRevenue">₹0</p>
+        <p class="text-indigo-200 text-xs mt-1">Total generated</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════ NAV TABS ═══════════════ -->
+    <div class="section-card p-2 flex gap-1 flex-wrap">
+      <button class="nav-tab active" data-tab="catalogue">📚 Catalogue</button>
+      <button class="nav-tab" data-tab="sales">🧾 Record Sale</button>
+      <button class="nav-tab" data-tab="ledger">📒 Sales Ledger</button>
+      <button class="nav-tab" data-tab="reports">📊 Reports</button>
+    </div>
+
+    <!-- ═══════════════ TAB: CATALOGUE ═══════════════ -->
+    <div class="tab-panel active" id="tab-catalogue">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        <!-- Add Book Form -->
+        <div class="section-card p-6 lg:col-span-1">
+          <p class="section-eyebrow mb-1">Expand Catalogue</p>
+          <p class="section-title mb-5">Add New Book</p>
+          <div class="space-y-4">
+            <div>
+              <label class="form-label">Book Title *</label>
+              <input type="text" id="newBookTitle" class="form-input" placeholder="e.g. Living Ecological Heritage" />
+            </div>
+            <div>
+              <label class="form-label">Initial Stock *</label>
+              <input type="number" id="newBookStock" class="form-input" placeholder="e.g. 100" min="0" />
+            </div>
+            <button class="btn-primary w-full" onclick="addBook()">+ Add to Catalogue</button>
+          </div>
+        </div>
+
+        <!-- Catalogue Table -->
+        <div class="section-card lg:col-span-2 overflow-hidden">
+          <div class="px-6 pt-5 pb-3 border-b border-slate-100">
+            <p class="section-eyebrow mb-0.5">Manage Stock</p>
+            <p class="section-title">Book Catalogue</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Book Title</th>
+                  <th>Current Stock</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="catalogueBody"></tbody>
+            </table>
+            <div id="catalogueEmpty" class="empty-state hidden">
+              <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#cbd5e1" stroke-width="1.5">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/>
+              </svg>
+              <p class="font-semibold text-slate-400">No books yet</p>
+              <p class="text-sm text-slate-300 mt-1">Add your first book using the form.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ TAB: RECORD SALE ═══════════════ -->
+    <div class="tab-panel" id="tab-sales">
+      <div class="section-card p-6 max-w-2xl">
+        <p class="section-eyebrow mb-1">Transaction Entry</p>
+        <p class="section-title mb-6">Record New Sale</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="form-label">Book *</label>
+            <select id="saleBook" class="form-input">
+              <option value="">— Select a book —</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Quantity Sold *</label>
+            <input type="number" id="saleQty" class="form-input" placeholder="e.g. 5" min="1" />
+          </div>
+          <div>
+            <label class="form-label">Price Per Copy (₹) *</label>
+            <input type="number" id="salePrice" class="form-input" placeholder="e.g. 450" min="0" step="0.01" />
+          </div>
+          <div>
+            <label class="form-label">Date of Sale *</label>
+            <input type="date" id="saleDate" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label">Mode of Payment *</label>
+            <select id="saleMode" class="form-input">
+              <option value="Cash">Cash</option>
+              <option value="Online">Online</option>
+              <option value="Account Transfer">Account Transfer</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="form-label">Buyer's Name *</label>
+            <input type="text" id="saleBuyer" class="form-input" placeholder="Individual, institution, or group name" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="form-label">Place of Purchase *</label>
+            <select id="salePlace" class="form-input">
+              <option value="">— Select place of purchase —</option>
+              <option value="Amazon">Amazon</option>
+              <option value="MLCU Press Office">MLCU Press Office</option>
+              <option value="Book Fair">Book Fair</option>
+              <option value="Book Exhibition">Book Exhibition</option>
+              <option value="Events">Events</option>
+              <option value="MLCU Library">MLCU Library</option>
+              <option value="MLCU Press WhatsApp">MLCU Press WhatsApp</option>
+              <option value="Instagram">Instagram</option>
+              <option value="Book Centres">Book Centres</option>
+              <option value="Other Library">Other Library</option>
+              <option value="Any Other">Any Other</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <button class="btn-primary w-full py-3 text-base" onclick="recordSale()">✓ Record Sale</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ TAB: SALES LEDGER ═══════════════ -->
+    <div class="tab-panel" id="tab-ledger">
+      <div class="section-card overflow-hidden">
+        <div class="px-6 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p class="section-eyebrow mb-0.5">All Transactions</p>
+            <p class="section-title">Sales Ledger</p>
+          </div>
+          <span class="text-xs text-slate-400 font-medium">Editing a row restores stock automatically.</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Book Title</th>
+                <th>Buyer</th>
+                <th class="hide-mobile">Qty</th>
+                <th class="hide-mobile">Unit ₹</th>
+                <th>Total ₹</th>
+                <th class="hide-mobile">Mode</th>
+                <th class="hide-mobile">Place</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+          </table>
+          <div id="ledgerEmpty" class="empty-state hidden">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#cbd5e1" stroke-width="1.5">
+              <path d="M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V7l-5-5H5a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            <p class="font-semibold text-slate-400">No sales recorded yet</p>
+            <p class="text-sm text-slate-300 mt-1">Use the "Record Sale" tab to log transactions.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ TAB: REPORTS ═══════════════ -->
+    <div class="tab-panel" id="tab-reports">
+      <div class="space-y-5">
+        <!-- Month Picker -->
+        <div class="section-card p-6">
+          <p class="section-eyebrow mb-1">Analytics</p>
+          <p class="section-title mb-4">Performance Report</p>
+          <div class="flex items-end gap-3 flex-wrap">
+            <div>
+              <label class="form-label">Report Type</label>
+              <select id="reportType" class="form-input" style="width:160px" onchange="toggleReportInputs()">
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+            <div id="reportMonthWrap">
+              <label class="form-label">Select Month</label>
+              <input type="month" id="reportMonth" class="form-input" style="width:180px" />
+            </div>
+            <div id="reportYearWrap" style="display:none">
+              <label class="form-label">Select Year</label>
+              <input type="number" id="reportYear" class="form-input" style="width:120px" min="2000" max="2100" placeholder="e.g. 2025" />
+            </div>
+            <button class="btn-primary" onclick="generateReport()">Generate Report</button>
+          </div>
+        </div>
+
+        <!-- Report Output (hidden until generated) -->
+        <div id="reportOutput" class="hidden space-y-5">
+
+          <!-- Totals -->
+          <div class="grid grid-cols-2 gap-4" id="reportTotals"></div>
+
+          <!-- Book Breakdown Table -->
+          <div class="section-card overflow-hidden">
+            <div class="px-6 pt-5 pb-3 border-b border-slate-100">
+              <p class="section-eyebrow mb-0.5">By Title</p>
+              <p class="section-title">Itemised Breakdown</p>
+            </div>
+            <div class="overflow-x-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Book Title</th>
+                    <th>Copies Sold</th>
+                    <th>Revenue (₹)</th>
+                  </tr>
+                </thead>
+                <tbody id="reportBreakdownBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Chart -->
+          <div class="section-card p-6">
+            <p class="section-eyebrow mb-1">Visualisation</p>
+            <p class="section-title mb-4">Copies Sold by Title</p>
+            <div style="position:relative; height:320px;">
+              <canvas id="reportChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════ EDIT MODAL ═══════════════ -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+      <p class="modal-title">✏️ Edit Sale Record</p>
+      <input type="hidden" id="editSaleId" />
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="form-label">Book</label>
+          <select id="editBook" class="form-input"></select>
+        </div>
+        <div>
+          <label class="form-label">Quantity Sold</label>
+          <input type="number" id="editQty" class="form-input" min="1" />
+        </div>
+        <div>
+          <label class="form-label">Price Per Copy (₹)</label>
+          <input type="number" id="editPrice" class="form-input" min="0" step="0.01" />
+        </div>
+        <div>
+          <label class="form-label">Date of Sale</label>
+          <input type="date" id="editDate" class="form-input" />
+        </div>
+        <div>
+          <label class="form-label">Mode of Payment</label>
+          <select id="editMode" class="form-input">
+            <option value="Cash">Cash</option>
+            <option value="Online">Online</option>
+            <option value="Account Transfer">Account Transfer</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="form-label">Buyer's Name</label>
+          <input type="text" id="editBuyer" class="form-input" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="form-label">Place of Purchase</label>
+          <select id="editPlace" class="form-input">
+            <option value="">— Select place of purchase —</option>
+            <option value="Amazon">Amazon</option>
+            <option value="MLCU Press Office">MLCU Press Office</option>
+            <option value="Book Fair">Book Fair</option>
+            <option value="Book Exhibition">Book Exhibition</option>
+            <option value="Events">Events</option>
+            <option value="MLCU Library">MLCU Library</option>
+            <option value="MLCU Press WhatsApp">MLCU Press WhatsApp</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Book Centres">Book Centres</option>
+            <option value="Other Library">Other Library</option>
+            <option value="Any Other">Any Other</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2 flex gap-3 pt-2">
+          <button class="btn-primary flex-1" onclick="saveEdit()">Save Changes</button>
+          <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+  <script>
+    /* ──────────────────────────────────────────
+       DATA MODEL & PERSISTENCE
+    ────────────────────────────────────────── */
+
+    // Load data from localStorage or initialise defaults
+    let catalogue = JSON.parse(localStorage.getItem('mlcu_catalogue') || '[]');
+    let sales     = JSON.parse(localStorage.getItem('mlcu_sales')     || '[]');
+
+    // If first time, seed sample data so the dashboard isn't empty
+    if (!catalogue.length) {
+      catalogue = [
+        { id: uid(), title: 'Living Ecological Heritage of Meghalaya', stock: 120 },
+        { id: uid(), title: 'Picnic and Pine Needles and Rain', stock: 85 },
+        { id: uid(), title: 'Hima Khyrim', stock: 60 },
+      ];
+      save();
+    }
+
+    function save() {
+      localStorage.setItem('mlcu_catalogue', JSON.stringify(catalogue));
+      localStorage.setItem('mlcu_sales',     JSON.stringify(sales));
+    }
+
+    /* ──────────────────────────────────────────
+       BACKUP (EXPORT) & RESTORE (IMPORT)
+       Saves the full dataset as a downloadable
+       .json file on the user's own computer —
+       independent of browser localStorage, so it
+       survives cache clears and can be moved
+       between devices or kept as an archive.
+    ────────────────────────────────────────── */
+
+    function exportData() {
+      const payload = {
+        app: 'MLCU Press Inventory & Sales Dashboard',
+        exportedAt: new Date().toISOString(),
+        catalogue,
+        sales,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const stamp = todayISO();
+      a.href = url;
+      a.download = `mlcu-press-backup-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('Backup file downloaded.', 'success');
+    }
+
+    function importData(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let data;
+        try {
+          data = JSON.parse(e.target.result);
+        } catch (err) {
+          toast('That file is not valid JSON.', 'error');
+          return;
+        }
+        if (!Array.isArray(data.catalogue) || !Array.isArray(data.sales)) {
+          toast('This does not look like a valid MLCU Press backup file.', 'error');
+          return;
+        }
+        const summary = `This backup contains ${data.catalogue.length} book title(s) and ${data.sales.length} sale record(s).\n\nRestoring will REPLACE all data currently in this dashboard. Continue?`;
+        if (!confirm(summary)) return;
+
+        catalogue = data.catalogue;
+        sales     = data.sales;
+        save();
+        renderAll();
+        toast('Data restored from backup file.', 'success');
+      };
+      reader.onerror = () => toast('Could not read the selected file.', 'error');
+      reader.readAsText(file);
+      // Reset the input so selecting the same file again still fires onchange
+      document.getElementById('importFileInput').value = '';
+    }
+
+    /* ──────────────────────────────────────────
+       GOOGLE DRIVE SYNC
+       Uses Google Identity Services (GIS) to get a
+       short-lived access token, then talks to the
+       Drive REST API directly with fetch(). Scope
+       is restricted to drive.file, meaning this app
+       can only see/edit files IT creates — never
+       your other Drive files.
+
+       SETUP REQUIRED: replace GOOGLE_CLIENT_ID below
+       with your own OAuth 2.0 Client ID. See the
+       accompanying setup guide for how to get one.
+    ────────────────────────────────────────── */
+
+    const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com'; // ← replace this
+    const DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.file';
+    const DRIVE_FILENAME = 'mlcu-press-data.json';
+
+    let gisTokenClient   = null;
+    let driveAccessToken = null;
+    let driveFileId      = localStorage.getItem('mlcu_drive_file_id') || null;
+
+    function initGoogleDrive() {
+      if (GOOGLE_CLIENT_ID.startsWith('YOUR_CLIENT_ID')) {
+        toast('Google Drive is not configured yet. Add your Client ID in the code first.', 'error');
+        return;
+      }
+      if (!window.google || !window.google.accounts) {
+        toast('Google sign-in is still loading — please try again in a second.', 'error');
+        return;
+      }
+      if (!gisTokenClient) {
+        gisTokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: DRIVE_SCOPE,
+          callback: (tokenResponse) => {
+            if (tokenResponse.error) {
+              toast('Google Drive authorisation failed or was cancelled.', 'error');
+              return;
+            }
+            driveAccessToken = tokenResponse.access_token;
+            setDriveConnectedUI(true);
+            toast('Connected to Google Drive.', 'success');
+          },
+        });
+      }
+      gisTokenClient.requestAccessToken();
+    }
+
+    function setDriveConnectedUI(connected) {
+      document.getElementById('driveConnectBtn').style.display = connected ? 'none' : '';
+      document.getElementById('driveSaveBtn').style.display    = connected ? '' : 'none';
+      document.getElementById('driveLoadBtn').style.display    = connected ? '' : 'none';
+    }
+
+    async function saveToDrive() {
+      if (!driveAccessToken) return toast('Connect to Google Drive first.', 'error');
+
+      const payload = {
+        app: 'MLCU Press Inventory & Sales Dashboard',
+        exportedAt: new Date().toISOString(),
+        catalogue,
+        sales,
+      };
+      const fileContent = JSON.stringify(payload, null, 2);
+
+      try {
+        let response;
+        if (driveFileId) {
+          // A file already exists on Drive from a previous save — update it in place
+          response = await fetch(
+            `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${driveAccessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: fileContent,
+            }
+          );
+        } else {
+          // First save — create a new file on Drive using a multipart request
+          const boundary = 'mlcu_press_boundary';
+          const metadata = { name: DRIVE_FILENAME, mimeType: 'application/json' };
+          const multipartBody =
+            `--${boundary}\r\n` +
+            'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+            JSON.stringify(metadata) + '\r\n' +
+            `--${boundary}\r\n` +
+            'Content-Type: application/json\r\n\r\n' +
+            fileContent + '\r\n' +
+            `--${boundary}--`;
+
+          response = await fetch(
+            'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${driveAccessToken}`,
+                'Content-Type': `multipart/related; boundary=${boundary}`,
+              },
+              body: multipartBody,
+            }
+          );
+        }
+
+        if (!response.ok) throw new Error(await response.text());
+        const result = await response.json();
+        if (result.id) {
+          driveFileId = result.id;
+          localStorage.setItem('mlcu_drive_file_id', driveFileId);
+        }
+        toast('Saved to Google Drive.', 'success');
+      } catch (err) {
+        console.error('Drive save error:', err);
+        toast('Could not save to Google Drive. Try reconnecting.', 'error');
+      }
+    }
+
+    async function loadFromDrive() {
+      if (!driveAccessToken) return toast('Connect to Google Drive first.', 'error');
+      if (!driveFileId) return toast('No file has been saved to Drive from this app yet.', 'error');
+
+      try {
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,
+          { headers: { Authorization: `Bearer ${driveAccessToken}` } }
+        );
+        if (!response.ok) throw new Error(await response.text());
+        const data = await response.json();
+
+        if (!Array.isArray(data.catalogue) || !Array.isArray(data.sales)) {
+          toast('The file on Drive does not look like a valid MLCU Press backup.', 'error');
+          return;
+        }
+        const summary = `Load data from Google Drive?\n\nThis file has ${data.catalogue.length} book title(s) and ${data.sales.length} sale record(s), and will REPLACE everything currently shown. Continue?`;
+        if (!confirm(summary)) return;
+
+        catalogue = data.catalogue;
+        sales     = data.sales;
+        save();
+        renderAll();
+        toast('Data loaded from Google Drive.', 'success');
+      } catch (err) {
+        console.error('Drive load error:', err);
+        toast('Could not load from Google Drive. Try reconnecting.', 'error');
+      }
+    }
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    /* ──────────────────────────────────────────
+       RENDER ENGINE
+    ────────────────────────────────────────── */
+
+    function renderAll() {
+      renderMetrics();
+      renderCatalogue();
+      renderLedger();
+      populateBookDropdowns();
+    }
+
+    function renderMetrics() {
+      const totalStock   = catalogue.reduce((s, b) => s + Number(b.stock), 0);
+      const totalRevenue = sales.reduce((s, t) => s + t.qty * t.price, 0);
+      document.getElementById('metricTitles').textContent  = catalogue.length;
+      document.getElementById('metricStock').textContent   = totalStock.toLocaleString('en-IN');
+      document.getElementById('metricRevenue').textContent = '₹' + fmt(totalRevenue);
+    }
+
+    function renderCatalogue() {
+      const tbody = document.getElementById('catalogueBody');
+      const empty = document.getElementById('catalogueEmpty');
+      tbody.innerHTML = '';
+      if (!catalogue.length) {
+        empty.classList.remove('hidden'); return;
+      }
+      empty.classList.add('hidden');
+      catalogue.forEach((book, i) => {
+        const stockClass = book.stock <= 10 ? 'low-stock' : '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-slate-400 font-mono text-xs">${String(i + 1).padStart(2, '0')}</td>
+          <td class="font-medium text-slate-800">${esc(book.title)}</td>
+          <td>
+            <input
+              type="number"
+              class="stock-input ${stockClass}"
+              value="${book.stock}"
+              min="0"
+              data-id="${book.id}"
+              onchange="updateStock(this)"
+              title="Edit stock directly"
+            />
+          </td>
+          <td>
+            <button class="btn-danger" onclick="deleteBook('${book.id}')">Remove</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderLedger() {
+      const tbody = document.getElementById('ledgerBody');
+      const empty = document.getElementById('ledgerEmpty');
+      tbody.innerHTML = '';
+      if (!sales.length) {
+        empty.classList.remove('hidden'); return;
+      }
+      empty.classList.add('hidden');
+      // Newest first
+      const sorted = [...sales].sort((a, b) => new Date(b.date) - new Date(a.date));
+      sorted.forEach(t => {
+        const badgeClass = t.mode === 'Cash' ? 'badge-cash' : t.mode === 'Online' ? 'badge-online' : 'badge-transfer';
+        const total = t.qty * t.price;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-xs text-slate-500 whitespace-nowrap">${fmtDate(t.date)}</td>
+          <td class="font-medium max-w-xs truncate" title="${esc(t.bookTitle)}">${esc(t.bookTitle)}</td>
+          <td class="text-xs">${esc(t.buyer)}</td>
+          <td class="hide-mobile font-semibold text-center">${t.qty}</td>
+          <td class="hide-mobile text-right">₹${fmt(t.price)}</td>
+          <td class="font-bold text-right text-emerald-700">₹${fmt(total)}</td>
+          <td class="hide-mobile"><span class="badge ${badgeClass}">${t.mode}</span></td>
+          <td class="hide-mobile text-xs text-slate-500">${esc(t.place || '—')}</td>
+          <td class="whitespace-nowrap">
+            <button class="btn-edit mr-1" onclick="openEditModal('${t.id}')">Edit</button>
+            <button class="btn-danger" onclick="deleteSale('${t.id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function populateBookDropdowns() {
+      ['saleBook', 'editBook'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">— Select a book —</option>';
+        catalogue.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = b.title;
+          if (b.id === current) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    /* ──────────────────────────────────────────
+       CATALOGUE ACTIONS
+    ────────────────────────────────────────── */
+
+    function addBook() {
+      const title = document.getElementById('newBookTitle').value.trim();
+      const stock = parseInt(document.getElementById('newBookStock').value, 10);
+      if (!title) return toast('Please enter a book title.', 'error');
+      if (isNaN(stock) || stock < 0) return toast('Enter a valid initial stock number.', 'error');
+      if (catalogue.some(b => b.title.toLowerCase() === title.toLowerCase()))
+        return toast('A book with this title already exists.', 'error');
+      catalogue.push({ id: uid(), title, stock });
+      save(); renderAll();
+      document.getElementById('newBookTitle').value = '';
+      document.getElementById('newBookStock').value = '';
+      toast(`"${title}" added to catalogue.`, 'success');
+    }
+
+    function updateStock(input) {
+      const id  = input.getAttribute('data-id');
+      const val = parseInt(input.value, 10);
+      if (isNaN(val) || val < 0) { input.value = 0; return; }
+      const book = catalogue.find(b => b.id === id);
+      if (book) { book.stock = val; save(); renderMetrics(); }
+    }
+
+    function deleteBook(id) {
+      const book = catalogue.find(b => b.id === id);
+      if (!book) return;
+      const linked = sales.filter(s => s.bookId === id);
+      if (linked.length) {
+        if (!confirm(`"${book.title}" has ${linked.length} sale record(s). Removing the book will also delete those records. Continue?`)) return;
+        sales = sales.filter(s => s.bookId !== id);
+      }
+      catalogue = catalogue.filter(b => b.id !== id);
+      save(); renderAll();
+      toast(`"${book.title}" removed.`, 'success');
+    }
+
+    /* ──────────────────────────────────────────
+       SALES ACTIONS
+    ────────────────────────────────────────── */
+
+    function recordSale() {
+      const bookId = document.getElementById('saleBook').value;
+      const qty    = parseInt(document.getElementById('saleQty').value, 10);
+      const price  = parseFloat(document.getElementById('salePrice').value);
+      const date   = document.getElementById('saleDate').value;
+      const buyer  = document.getElementById('saleBuyer').value.trim();
+      const mode   = document.getElementById('saleMode').value;
+      const place  = document.getElementById('salePlace').value;
+
+      if (!bookId)          return toast('Please select a book.', 'error');
+      if (!qty || qty < 1)  return toast('Quantity must be at least 1.', 'error');
+      if (isNaN(price) || price < 0) return toast('Enter a valid price.', 'error');
+      if (!date)            return toast('Please select a date.', 'error');
+      if (!buyer)           return toast("Please enter the buyer's name.", 'error');
+      if (!place)           return toast('Please select a place of purchase.', 'error');
+
+      const book = catalogue.find(b => b.id === bookId);
+      if (!book) return toast('Book not found.', 'error');
+      if (qty > book.stock) return toast(`Only ${book.stock} copies of "${book.title}" in stock.`, 'error');
+
+      // Deduct stock
+      book.stock -= qty;
+      sales.push({ id: uid(), bookId, bookTitle: book.title, qty, price, date, buyer, mode, place });
+      save(); renderAll();
+
+      // Reset form
+      document.getElementById('saleBook').value  = '';
+      document.getElementById('saleQty').value   = '';
+      document.getElementById('salePrice').value = '';
+      document.getElementById('saleBuyer').value = '';
+      document.getElementById('salePlace').value = '';
+      document.getElementById('saleDate').value  = todayISO();
+
+      toast(`Sale of ${qty} × "${book.title}" recorded.`, 'success');
+      switchTab('ledger');
+    }
+
+    /* ──────────────────────────────────────────
+       EDIT MODAL
+    ────────────────────────────────────────── */
+
+    function openEditModal(id) {
+      const t = sales.find(s => s.id === id);
+      if (!t) return;
+      populateBookDropdowns();
+      document.getElementById('editSaleId').value = t.id;
+      document.getElementById('editBook').value   = t.bookId;
+      document.getElementById('editQty').value    = t.qty;
+      document.getElementById('editPrice').value  = t.price;
+      document.getElementById('editDate').value   = t.date;
+      document.getElementById('editBuyer').value  = t.buyer;
+      document.getElementById('editMode').value   = t.mode;
+      document.getElementById('editPlace').value  = t.place || '';
+      document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('open');
+    }
+
+    function saveEdit() {
+      const id       = document.getElementById('editSaleId').value;
+      const newBookId= document.getElementById('editBook').value;
+      const newQty   = parseInt(document.getElementById('editQty').value, 10);
+      const newPrice = parseFloat(document.getElementById('editPrice').value);
+      const newDate  = document.getElementById('editDate').value;
+      const newBuyer = document.getElementById('editBuyer').value.trim();
+      const newMode  = document.getElementById('editMode').value;
+      const newPlace = document.getElementById('editPlace').value;
+
+      if (!newBookId)         return toast('Please select a book.', 'error');
+      if (!newQty || newQty < 1) return toast('Quantity must be at least 1.', 'error');
+      if (isNaN(newPrice) || newPrice < 0) return toast('Enter a valid price.', 'error');
+      if (!newDate)           return toast('Please select a date.', 'error');
+      if (!newBuyer)          return toast("Please enter the buyer's name.", 'error');
+
+      const oldSale   = sales.find(s => s.id === id);
+      if (!oldSale) return;
+      const oldBook   = catalogue.find(b => b.id === oldSale.bookId);
+      const newBook   = catalogue.find(b => b.id === newBookId);
+      if (!newBook) return toast('Selected book not found.', 'error');
+
+      // ── Stock reconciliation ──────────────────
+      // Step 1: Restore old sale's stock to old book
+      if (oldBook) oldBook.stock += oldSale.qty;
+
+      // Step 2: Check new book has enough
+      if (newQty > newBook.stock) {
+        // Rollback
+        if (oldBook) oldBook.stock -= oldSale.qty;
+        return toast(`Only ${newBook.stock} copies of "${newBook.title}" available after restore.`, 'error');
+      }
+
+      // Step 3: Deduct from new book
+      newBook.stock -= newQty;
+
+      // Update sale record
+      Object.assign(oldSale, {
+        bookId: newBookId,
+        bookTitle: newBook.title,
+        qty: newQty,
+        price: newPrice,
+        date: newDate,
+        buyer: newBuyer,
+        mode: newMode,
+        place: newPlace,
+      });
+
+      save(); renderAll();
+      closeEditModal();
+      toast('Sale record updated and stock adjusted.', 'success');
+    }
+
+    /* ──────────────────────────────────────────
+       DELETE SALE
+    ────────────────────────────────────────── */
+
+    function deleteSale(id) {
+      const t = sales.find(s => s.id === id);
+      if (!t) return;
+      if (!confirm(`Delete this sale of ${t.qty} × "${t.bookTitle}" to ${t.buyer}?\nStock will be restored.`)) return;
+
+      // Restore stock
+      const book = catalogue.find(b => b.id === t.bookId);
+      if (book) book.stock += t.qty;
+
+      sales = sales.filter(s => s.id !== id);
+      save(); renderAll();
+      toast('Sale deleted and stock restored.', 'success');
+    }
+
+    /* ──────────────────────────────────────────
+       REPORTS
+    ────────────────────────────────────────── */
+
+    let reportChartInstance = null;
+
+    function toggleReportInputs() {
+      const type = document.getElementById('reportType').value;
+      document.getElementById('reportMonthWrap').style.display = type === 'monthly' ? '' : 'none';
+      document.getElementById('reportYearWrap').style.display  = type === 'yearly'  ? '' : 'none';
+    }
+
+    function generateReport() {
+      const type = document.getElementById('reportType').value;
+      let filtered, periodLabel;
+
+      if (type === 'monthly') {
+        const month = document.getElementById('reportMonth').value;
+        if (!month) return toast('Please select a month.', 'error');
+        filtered = sales.filter(s => s.date.startsWith(month));
+        periodLabel = fmtMonth(month);
+      } else {
+        const year = document.getElementById('reportYear').value.trim();
+        if (!year || isNaN(year)) return toast('Please enter a valid year.', 'error');
+        filtered = sales.filter(s => s.date.startsWith(year + '-'));
+        periodLabel = 'Year ' + year;
+      }
+
+      if (!filtered.length) {
+        toast(`No sales recorded for ${periodLabel}.`, 'error');
+        document.getElementById('reportOutput').classList.add('hidden');
+        return;
+      }
+
+      // Aggregates
+      const totalQty = filtered.reduce((s, t) => s + t.qty, 0);
+      const totalRev = filtered.reduce((s, t) => s + t.qty * t.price, 0);
+
+      // Totals cards
+      document.getElementById('reportTotals').innerHTML = `
+        <div class="metric-card rounded-xl p-5 text-white">
+          <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">Copies Sold</p>
+          <p class="text-4xl font-extrabold">${totalQty.toLocaleString('en-IN')}</p>
+          <p class="text-blue-200 text-xs mt-1">${periodLabel}</p>
+        </div>
+        <div class="metric-card green rounded-xl p-5 text-white">
+          <p class="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-1">Revenue</p>
+          <p class="text-4xl font-extrabold">₹${fmt(totalRev)}</p>
+          <p class="text-emerald-100 text-xs mt-1">${periodLabel}</p>
+        </div>
+      `;
+
+      // Breakdown by book
+      const byBook = {};
+      filtered.forEach(t => {
+        if (!byBook[t.bookTitle]) byBook[t.bookTitle] = { qty: 0, rev: 0 };
+        byBook[t.bookTitle].qty += t.qty;
+        byBook[t.bookTitle].rev += t.qty * t.price;
+      });
+      const labels  = Object.keys(byBook);
+      const qtys    = labels.map(l => byBook[l].qty);
+      const revs    = labels.map(l => byBook[l].rev);
+
+      let tbodyHtml = '';
+      labels.forEach((title, i) => {
+        tbodyHtml += `
+          <tr>
+            <td class="font-medium">${esc(title)}</td>
+            <td class="text-center font-bold">${qtys[i]}</td>
+            <td class="text-right font-bold text-emerald-700">₹${fmt(revs[i])}</td>
+          </tr>
+        `;
+      });
+      document.getElementById('reportBreakdownBody').innerHTML = tbodyHtml;
+
+      // Yearly: also add month-by-month sub-table
+      if (type === 'yearly') {
+        const byMonth = {};
+        filtered.forEach(t => {
+          const ym = t.date.slice(0, 7);
+          if (!byMonth[ym]) byMonth[ym] = { qty: 0, rev: 0 };
+          byMonth[ym].qty += t.qty;
+          byMonth[ym].rev += t.qty * t.price;
+        });
+        const sortedMonths = Object.keys(byMonth).sort();
+        let monthHtml = '<tr><td colspan="3" class="pt-5 pb-1"><span class="text-xs font-bold uppercase tracking-widest text-slate-400">↳ Month-by-Month Breakdown</span></td></tr>';
+        sortedMonths.forEach(ym => {
+          monthHtml += `<tr style="background:#f8fafc">
+            <td class="text-slate-500 pl-6 text-sm">${fmtMonth(ym)}</td>
+            <td class="text-center text-slate-600">${byMonth[ym].qty}</td>
+            <td class="text-right text-emerald-600 font-semibold">₹${fmt(byMonth[ym].rev)}</td>
+          </tr>`;
+        });
+        document.getElementById('reportBreakdownBody').innerHTML += monthHtml;
+      }
+
+      // Chart
+      if (reportChartInstance) reportChartInstance.destroy();
+      const ctx = document.getElementById('reportChart').getContext('2d');
+      const shortLabels = labels.map(l => l.length > 22 ? l.slice(0, 20) + '…' : l);
+      reportChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: shortLabels,
+          datasets: [{
+            label: 'Copies Sold',
+            data: qtys,
+            backgroundColor: labels.map((_, i) => `hsla(${210 + i * 40}, 72%, ${48 + i * 4}%, 0.85)`),
+            borderColor:     labels.map((_, i) => `hsla(${210 + i * 40}, 72%, ${40 + i * 4}%, 1)`),
+            borderWidth: 1.5,
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.parsed.y} copies — ₹${fmt(revs[ctx.dataIndex])} revenue`,
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 },
+              grid: { color: '#f1f5f9' }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 11 } }
+            }
+          }
+        }
+      });
+
+      document.getElementById('reportOutput').classList.remove('hidden');
+      toast(`Report generated for ${periodLabel}.`, 'success');
+    }
+
+    /* ──────────────────────────────────────────
+       TABS
+    ────────────────────────────────────────── */
+
+    function switchTab(name) {
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === name);
+      });
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === 'tab-' + name);
+      });
+    }
+
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    /* ──────────────────────────────────────────
+       UTILITIES
+    ────────────────────────────────────────── */
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmt(n) {
+      return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const [y, m, d] = iso.split('-');
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${d} ${months[parseInt(m,10)-1]} ${y}`;
+    }
+
+    function fmtMonth(ym) {
+      const [y, m] = ym.split('-');
+      const months = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+      return `${months[parseInt(m,10)-1]} ${y}`;
+    }
+
+    function todayISO() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    let toastTimer;
+    function toast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `toast ${type} show`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+    }
+
+    // Close modal when clicking overlay
+    document.getElementById('editModal').addEventListener('click', function(e) {
+      if (e.target === this) closeEditModal();
+    });
+
+    /* ──────────────────────────────────────────
+       INIT
+    ────────────────────────────────────────── */
+
+    // Set header date
+    document.getElementById('headerDate').textContent =
+      new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    // Default sale date to today
+    document.getElementById('saleDate').value = todayISO();
+
+    // Default report month / year
+    document.getElementById('reportMonth').value = todayISO().slice(0, 7);
+    document.getElementById('reportYear').value  = todayISO().slice(0, 4);
+
+    // Initial render
+    renderAll();
+
+  </script>
+</body>
+</html>
